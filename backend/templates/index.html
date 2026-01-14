@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial Object Tracking</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-chartjs-2@5.2.0/dist/index.umd.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background-color: #f0f2f5;
+        }
+        .App {
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .App-header {
+            background-color: #282c34;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(10px + 2vmin);
+            color: white;
+        }
+        .status-indicator {
+            font-size: 14px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .status-indicator.connected { background-color: #4caf50; color: white; }
+        .status-indicator.disconnected { background-color: #f44336; color: white; }
+        .dashboard-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+            gap: 20px;
+            flex: 1;
+        }
+        .video-container, .stats-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            flex: 1;
+            min-width: 300px;
+            max-width: 800px;
+        }
+        .video-wrapper {
+            width: 100%;
+            overflow: hidden;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            min-height: 480px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+        .video-wrapper img { width: 100%; height: auto; display: block; }
+        .stats-cards {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            flex: 1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card h3 { margin: 0 0 10px 0; font-size: 16px; color: #666; }
+        .card .count { font-size: 24px; font-weight: bold; margin: 0; color: #333; }
+        .chart-container { height: 300px; position: relative; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    {% raw %}
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Simple Chart Component since react-chartjs-2 might be tricky with CDN
+        // We'll use a simple HTML/CSS bar chart or just display stats for now to ensure it works
+        // Actually, let's try to use Chart.js directly in a useEffect
+        
+        function StatsChart({ data }) {
+            const chartRef = React.useRef(null);
+            const chartInstance = React.useRef(null);
+
+            useEffect(() => {
+                if (chartRef.current) {
+                    const ctx = chartRef.current.getContext('2d');
+                    
+                    if (chartInstance.current) {
+                        chartInstance.current.destroy();
+                    }
+
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Person', 'Vehicle', 'Machinery'],
+                            datasets: [{
+                                label: 'Detected Objects',
+                                data: [data.person, data.vehicle, data.machinery],
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.5)',
+                                    'rgba(54, 162, 235, 0.5)',
+                                    'rgba(255, 206, 86, 0.5)',
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                            }
+                        }
+                    });
+                }
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [data]);
+
+            return <canvas ref={chartRef} />;
+        }
+
+        function App() {
+            const [stats, setStats] = useState({ person: 0, vehicle: 0, machinery: 0 });
+            const [isConnected, setIsConnected] = useState(false);
+
+            useEffect(() => {
+                const fetchStats = async () => {
+                    try {
+                        const response = await axios.get('/stats');
+                        setStats(response.data);
+                        setIsConnected(true);
+                    } catch (error) {
+                        console.error('Error fetching stats:', error);
+                        setIsConnected(false);
+                    }
+                };
+
+                const interval = setInterval(fetchStats, 1000);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="App">
+                    <header className="App-header">
+                        <h1>Industrial Object Tracking Dashboard</h1>
+                        <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
+                            {isConnected ? 'System Online' : 'Connecting to Server...'}
+                        </div>
+                    </header>
+                    
+                    <main className="dashboard-content">
+                        <div className="video-container">
+                            <h2>Live Feed</h2>
+                            <div className="video-wrapper">
+                                <img 
+                                    src="/video_feed" 
+                                    alt="Live Object Detection Feed" 
+                                    onError={(e) => {
+                                        e.target.src = 'https://via.placeholder.com/640x480?text=Video+Feed+Unavailable';
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="stats-container">
+                            <h2>Statistics</h2>
+                            <div className="chart-container">
+                                <StatsChart data={stats} />
+                            </div>
+                            <div className="stats-cards">
+                                <div className="card">
+                                    <h3>Personnel</h3>
+                                    <p className="count">{stats.person}</p>
+                                </div>
+                                <div className="card">
+                                    <h3>Vehicles</h3>
+                                    <p className="count">{stats.vehicle}</p>
+                                </div>
+                                <div className="card">
+                                    <h3>Machinery</h3>
+                                    <p className="count">{stats.machinery}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    {% endraw %}
+</body>
+</html>

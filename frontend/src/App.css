@@ -1,0 +1,106 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  position: relative;
+}
+
+.status-indicator {
+  font-size: 14px;
+  padding: 5px 10px;
+  border-radius: 15px;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.status-indicator.connected {
+  background-color: #4caf50;
+  color: white;
+}
+
+.status-indicator.disconnected {
+  background-color: #f44336;
+  color: white;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 20px;
+  gap: 20px;
+  flex: 1;
+}
+
+.video-container, .stats-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 20px;
+  flex: 1;
+  min-width: 300px;
+  max-width: 800px;
+}
+
+.video-wrapper {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.video-wrapper img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.stats-cards {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.card {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  flex: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #666;
+}
+
+.card .count {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+  color: #333;
+}
+
+.chart-wrapper {
+  height: 300px;
+  position: relative;
+}
