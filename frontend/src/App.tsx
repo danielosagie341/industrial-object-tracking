@@ -27,7 +27,7 @@ interface Stats {
   machinery: number;
 }
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
+const API_URL = "https://industrial-tracking-api.onrender.com";
 
 function App() {
   const [stats, setStats] = useState<Stats>({ person: 0, vehicle: 0, machinery: 0 });
