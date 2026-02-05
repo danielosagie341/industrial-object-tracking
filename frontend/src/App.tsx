@@ -27,7 +27,7 @@ interface Stats {
   machinery: number;
 }
 
-const API_URL = "https://industrial-tracking-api.onrender.com";
+const API_URL = 'https://industrial-tracking-api.onrender.com';
 
 function App() {
   const [stats, setStats] = useState<Stats>({ person: 0, vehicle: 0, machinery: 0 });
@@ -104,17 +104,18 @@ function App() {
       try {
         const video = videoRef.current;
         const canvas = document.createElement('canvas');
-        // Limit Resolution for speed (320px is enough for detection, 640px for nice view)
-        // If your internet is slow, change this to video.videoWidth / 2
-        canvas.width = video.videoWidth; 
-        canvas.height = video.videoHeight;
+        
+        // OPTIMIZATION 1: Downscale radically for upload
+        // 320px width is enough for AI detection and 4x faster to upload than 640px
+        const scaleFactor = 320 / video.videoWidth;
+        canvas.width = 320;
+        canvas.height = video.videoHeight * scaleFactor;
         
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           
-          // CONVERT TO BLOB
-          // Use 'image/jpeg' with 0.5 quality -> 50% smaller file size -> 2x faster upload
+          // OPTIMIZATION 2: Lower JPEG quality to 0.4 (40%)
           canvas.toBlob(async (blob) => {
             if (!blob || !isActive) {
                isProcessingRef.current = false;
@@ -124,22 +125,29 @@ function App() {
             const formData = new FormData();
             formData.append('frame', blob);
 
+            // OPTIMIZATION 3: Add a Timeout
+            // If server takes > 5 seconds, abort so UI doesn't hang
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             try {
               const response = await axios.post(`${API_URL}/process_frame`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                signal: controller.signal
               });
+              
+              clearTimeout(timeoutId);
 
-              if (isActive) {
+              if (isActive && response.data) {
                 setStats(response.data.stats);
                 setProcessedImage(`data:image/jpeg;base64,${response.data.image}`);
               }
             } catch (err) {
-              console.error("Frame skip:", err);
+              console.log("Frame dropped (network/processing lag)");
             } finally {
-              // Unlock immediately after response
               isProcessingRef.current = false;
             }
-          }, 'image/jpeg', 0.5); // Quality 0.5 is key for speed
+          }, 'image/jpeg', 0.4); 
         }
       } catch (e) {
         isProcessingRef.current = false;
