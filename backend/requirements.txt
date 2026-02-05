@@ -3,3 +3,4 @@ flask-cors
 opencv-python-headless
 ultralytics
 numpy>=1.24.0
+gunicorn 
