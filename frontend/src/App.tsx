@@ -125,12 +125,13 @@ function App() {
             const formData = new FormData();
             formData.append('frame', blob);
 
-            // OPTIMIZATION 3: Add a Timeout
-            // If server takes > 5 seconds, abort so UI doesn't hang
+            // OPTIMIZATION 3: Increased Timeout for Cold Starts
+            // Render Free Tier needs up to 60s to wake up the first time.
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds
 
             try {
+              // Ensure this URL is YOUR actual Render Backend URL
               const response = await axios.post(`${API_URL}/process_frame`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 signal: controller.signal
@@ -141,9 +142,24 @@ function App() {
               if (isActive && response.data) {
                 setStats(response.data.stats);
                 setProcessedImage(`data:image/jpeg;base64,${response.data.image}`);
+                // Once we get one success, we can lower timeout for future frames if we wanted
+                setError(null); 
               }
-            } catch (err) {
-              console.log("Frame dropped (network/processing lag)");
+            } catch (err: any) {
+              // DETAILED DEBUGGING LOGS
+              if (axios.isCancel(err)) {
+                console.warn("Request timed out (Server is slow/sleeping)");
+              } else if (err.response) {
+                // The server responded with a status code outside of 2xx
+                console.error("Server Error:", err.response.status, err.response.data);
+                setError(`Server Error: ${err.response.status}`);
+              } else if (err.request) {
+                // The request was made but no response was received
+                console.error("Network Error (No Response):", err.request);
+                console.log("Check if Backend URL is correct and Server is running");
+              } else {
+                console.error("Error setting up request:", err.message);
+              }
             } finally {
               isProcessingRef.current = false;
             }

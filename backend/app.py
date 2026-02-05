@@ -1,3 +1,8 @@
+import os
+# Limit Torch/YOLO threads to prevent memory spike
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
 from flask import Flask, jsonify, Response, render_template, request
 from flask_cors import CORS
 import cv2
